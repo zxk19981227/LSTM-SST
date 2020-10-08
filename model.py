@@ -14,9 +14,9 @@ class Modle(torch.nn.Module):
         with open("./data/SST-cla/glove.txt") as f:
             lines = f.readlines()
             for line in tqdm(lines):
-                data = line.strip().split(' ')[1:]
-                if data == []:
+                if line=='\n':
                     continue
+                data = line.strip().split(' ')[1:]
                 sen = [float(i) for i in data]
                 weight.append(sen)
                 assert len(sen)==300

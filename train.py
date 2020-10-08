@@ -1,7 +1,7 @@
 import torch
 from tqdm import tqdm
 from torch.autograd import  Variable
-from T_f import Modle
+from model import Modle
 from reader import Reader
 import numpy as np
 

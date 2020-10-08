@@ -11,7 +11,6 @@ with open("./data/glove.42B.300d.txt",'r',encoding='utf-8') as f:
         word=line.split(' ')[0]
         dict1[word]=len(dict1.keys())
         embedding_dict[dict1[word]]=line.split(' ')[1:]
-print(len(dict1.keys()))
 file_path=["train.txt","dev.txt"]
 dict_self={"<padding>":0,"<unk>":1}
 self_embedding={"<padding>":res2,"<unk>":res}
@@ -22,29 +21,11 @@ for path in file_path:
         with open(file, 'r', encoding='utf-8') as f:
             lines = f.readlines()
             for line in tqdm(lines):
-                score = int(line[1])
-                sentence = []
-                char_next = False
-                space = True
-                for char in line.strip():
-                    if char_next:
-                        char_next = False
-                        continue
-                    if char == '(':  # 左等于，先判断这里
-                        char_next = True
-                        space = True
-                    elif char == ')':
-                        space = True
-                        continue
-                    elif char == ' ':
-                        space = True
-                    elif space == True:
-                        if sentence == [] or sentence[-1] != ['']:
-                            sentence.append('')
-                        sentence[-1] += char
-                        space = False
-                    else:
-                        sentence[-1] += char
+                line=line.strip().split(' ')
+                while '' in line:
+                    line.remove('')
+                score = int(line[0])
+                sentence = line[1:]
                 te=[]
                 # print(sentence)
                 for word in sentence:
