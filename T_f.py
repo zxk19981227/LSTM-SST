@@ -14,6 +14,8 @@ class Modle(torch.nn.Module):
         with open("./data/SST-cla/glove.txt") as f:
             lines = f.readlines()
             for line in tqdm(lines):
+                if line=='\n':
+                    continue
                 data = line.strip().split(' ')[1:]
                 if data == []:
                     continue
@@ -24,11 +26,13 @@ class Modle(torch.nn.Module):
         weights = numpy.array(weight)
         embedding_size = 300
         vocab_size = weights.shape[0]
-        print("vocab_size", vocab_size)
-        self.model = LSTM(embedding_size,target_size, layer_num,dropout=dropout)
+        # print("vocab_size", vocab_size)
+        self.model = LSTM(embedding_size,target_size, layer_num,dropout=dropout,bidirectional=True)
         self.embedding = torch.nn.Embedding(vocab_size, embedding_size)
         self.embedding.from_pretrained(torch.from_numpy(weights))
-        self.linear1=torch.nn.Linear(target_size,1)
+        self.linear1=torch.nn.Linear(2*target_size,1)
+        # print("target_size",target_size)
+        self.layer_num=layer_num
         self.linear2=torch.nn.Linear(seq_len,label_size)
 
     def forward(self, inputs):
@@ -37,10 +41,20 @@ class Modle(torch.nn.Module):
         inputs=inputs.permute((1,0,2))
         inputs = inputs.cuda()
         # print("inputs:{}".format(inputs.requires_grad))
-        outs,(_,_) = self.model(inputs)
+        outs,(hidden,cell_status) = self.model(inputs)
+        # hidden=hidden.view(self.layer_num, 2, batch_size, -1)
+        # hidden=hidden[-1]
+        # hidden=outs[-1]
         outs=outs.permute((1,0,2))
+        # cell_status=cell_status.permute((1,0,2))
+        # hidden=hidden.reshape(batch_size,-1)
+        # print("hidden shape",hidden.shape)
+        # cell_status=cell_status.reshape(batch_size,-1)
+        # outs=torch.cat((hidden,cell_status),-1)
+
         outs=self.linear1(outs)
         outs=self.linear2(outs.view(batch_size,-1))
 
 
         return outs
+

@@ -34,7 +34,7 @@ class Modle(torch.nn.Module):
         self.hidden_states =Variable(torch.zeros((1, target_size)), requires_grad=False).cuda()
         self.back_states = Variable(torch.zeros((1, target_size)), requires_grad=False).cuda()
         self.back_hidden =Variable(torch.zeros((1, target_size)), requires_grad=False).cuda()
-        # self.embedding.from_pretrained(torch.from_numpy(weights))
+        self.embedding.from_pretrained(torch.from_numpy(weights))
         # self.LSTM = LSTM(target_size,layer_num,seq_len,label_size,dropout_rate)
         self.sig=torch.nn.Sigmoid()
 

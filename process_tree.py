@@ -11,7 +11,7 @@ with open("./data/glove.42B.300d.txt",'r',encoding='utf-8') as f:
         word=line.split(' ')[0]
         dict1[word]=len(dict1.keys())
         embedding_dict[dict1[word]]=line.split(' ')[1:]
-file_path=["train.txt","dev.txt"]
+file_path=["train.txt","dev.txt",'test.txt']
 dict_self={"<padding>":0,"<unk>":1}
 self_embedding={"<padding>":res2,"<unk>":res}
 for path in file_path:

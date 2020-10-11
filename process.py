@@ -12,12 +12,12 @@ with open("./data/glove.42B.300d.txt",'r',encoding='utf-8') as f:
         dict1[word]=len(dict1.keys())
         embedding_dict[dict1[word]]=line.split(' ')[1:]
 print(len(dict1.keys()))
-file_path=["train.txt","dev.txt"]
+file_path=["train.txt","dev.txt","test.txt"]
 dict_self={"<padding>":0,"<unk>":1}
 self_embedding={"<padding>":res2,"<unk>":res}
 for path in file_path:
-    file="./data/Tree/"+path
-    write="./data/SST-cla/"+path
+    file="./data/SST/"+path
+    write="./data/SST2/"+path
     with open(write,'w') as out:
         with open(file, 'r', encoding='utf-8') as f:
             lines = f.readlines()

@@ -1,4 +1,4 @@
-files = ["train.txt", "dev.txt"]
+files = ["train.txt", "dev.txt",'test.txt']
 
 
 def dp(info: list, out):
