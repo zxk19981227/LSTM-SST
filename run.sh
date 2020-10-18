@@ -1,0 +1,1 @@
+nohup python main.py --learnrate 0.01  --dropout 0.2 --embedding 200 --layer 1  >main.output 2>&1

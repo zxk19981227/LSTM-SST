@@ -4,15 +4,14 @@ from torch.autograd import Variable
 
 
 class LSTM_Unit(torch.nn.Module):
-    def __init__(self, embedding_size):
+    def __init__(self,hidden_size):
         super(LSTM_Unit, self).__init__()
-        self.weightf = torch.nn.Linear(2 * embedding_size, embedding_size)  # forget gate
-        self.weighti = torch.nn.Linear(2 * embedding_size, embedding_size)  # memory gate
-        self.weightc = torch.nn.Linear(2 * embedding_size, embedding_size)  # cell status
-        self.weighto = torch.nn.Linear(2 * embedding_size, embedding_size)  # out status
+        self.linear=torch.nn.Linear(hidden_size,4*hidden_size)
+        self.linear_hidden=torch.nn.Linear(hidden_size,4*hidden_size)
         self.sigmoid = torch.nn.Sigmoid()
-        self.cell_status=Variable(torch.zeros((1, embedding_size)), requires_grad=True).cuda()
+        # self.cell_status=Variable(torch.zeros((1, embedding_size)), requires_grad=True).cuda()
         self.tanh = torch.nn.Tanh()
+        print("hidden_size")
 
     def forward(self, state: torch.Tensor, input: torch.Tensor, cons: torch.Tensor):
         """
@@ -23,78 +22,52 @@ class LSTM_Unit(torch.nn.Module):
         """
         # print("state",state.shape)
         # print("input",input.shape)
-
-        concat_status = torch.cat((state, input), -1)
-        forget_status = self.weightf(concat_status)
-        forget_status = self.sigmoid(forget_status)
-        mem_gate = self.sigmoid(self.weighti(concat_status))
-        tmp_cell_status = self.tanh(self.weightc(concat_status))
-        cell_gate = mem_gate.mul(tmp_cell_status)
-        out_cell_status = cons.mul(forget_status) + cell_gate
-        out_hidden = self.tanh(out_cell_status).mul(forget_status)
-        return out_hidden, out_cell_status
+        # print(input.shape)
+        # print(state.shape)
+        feature=self.linear(input)+self.linear_hidden(state)
+        feature.squeeze()
+        ingate,forget_gate,cell_gate,cellstat=feature.chunk(4,1)
+        ingate=self.sigmoid(ingate)
+        forget_gate=self.sigmoid(forget_gate)
+        cell_gate=self.tanh(cell_gate)
+        cellstat=self.sigmoid(cellstat)
+        cell=torch.mul(cons,forget_gate)+torch.mul(ingate,cell_gate)
+        out=torch.mul(self.tanh(cell),cellstat)
+        return out,cell
 
 
 class LSTM(torch.nn.Module):
-    def __init__(self, embeddings_size, layer_num,sentence_length, label_size,dropoutrate):
+    def __init__(self, embeddings_size, layer_num,embe_size, label_size,dropoutrate):
         super(LSTM, self).__init__()
-        self.forward_model = torch.nn.ModuleList([LSTM_Unit(embeddings_size) for _ in range(layer_num)])
-        self.back_model = torch.nn.ModuleList([LSTM_Unit(embeddings_size) for _ in range(layer_num)])
-        # self.linear=torch.nn.Linear(2*embeddings_size,label_size)
-        # self.word_linear = torch.nn.Linear(2 * embeddings_size, 1)
-        self.predict_linear = torch.nn.Linear(2*embeddings_size, label_size)
         self.layer_num=layer_num
-        self.embedding_size=embeddings_size
-        self.fdropout=[torch.nn.Dropout(dropoutrate) for i in range(layer_num)]
-        self.bdropout=[torch.nn.Dropout(dropoutrate) for i in range(layer_num)]
-        self.fcell=[torch.nn.Dropout(dropoutrate) for i in range(layer_num)]
-        self.bcell=[torch.nn.Dropout(dropoutrate) for i in range(layer_num)]
+        self.model=torch.nn.ModuleList([LSTM_Unit(embe_size) for i in range(layer_num)])
+        self.predict_linear=torch.nn.Linear(embe_size,label_size)
+        self.hidden_size=embe_size
         self.dropout=torch.nn.Dropout(dropoutrate)
-    def forward(self, inputs: torch.Tensor, cell_states, hidden_states, back_states, back_hidden):
+    def forward(self, inputs: torch.Tensor):
         # print(input.shape)
+        self.begin_state= Variable(torch.zeros(self.layer_num,inputs.size(0), self.hidden_size).cuda())
+        self.hidden_state=Variable(torch.zeros(self.layer_num,inputs.size(0), self.hidden_size).cuda())
         batch_size = inputs.size(0)
         seq_len = inputs.size(1)
         # embedding_size = inputs.size(2)
         inputs = inputs.permute([1, 0, 2])
-        output = []
-        # print("Cell_states:{}".format(cell_states.requires_grad))
-        # print("hidden_states:{}".format(hidden_states.requires_grad))
-        # print("back_states:{}".format(back_states.requires_grad))
-        # print("back_hidden:{}".format(back_hidden.requires_grad))
-        forward=[]
-        backward=[]
-        tmp_fce=[cell_states]*self.layer_num
-        tmp_bce=[cell_states]*self.layer_num
-        fhidden=[hidden_states]*self.layer_num
-        bhidden=[hidden_states]*self.layer_num
-        # print("hidden",hidden_states.shape)
-        # print("cell",cell_states.shape)
-        # print("inputs",inputs.shape)
-        for word in range(seq_len):
-            forward_in = inputs[word]
-            backward_inputs = inputs[seq_len - word - 1]
-            for i in range(self.layer_num):
-                fhidden[i], tmp_fce[i] = self.forward_model[i](fhidden[i], forward_in, tmp_fce[i])
-                forward_in=self.fdropout[i](fhidden[i])
-                bhidden[i], tmp_bce[i] = self.back_model[i](bhidden[i], backward_inputs, tmp_bce[i])
-                backward_inputs=self.bdropout[i](bhidden[i])
-
-            # forward.append(forward_in)
-            # backward.append(backward_inputs)
-        # forward=torch.stack(forward,dim=0)
-        # backward.reverse()
-        # backward=torch.stack(backward,dim=0)
-        out_status = torch.cat((forward_in,backward_inputs), -1)
-            # print("Cell_states{}:{}".format(i,cell_states.requires_grad))
-            # print("hidden_states{}:{}".format(i,hidden_states.requires_grad))
-            # print("back_states{}:{}".format(i,back_states.requires_grad))
-            # print("back_hidden{}:{}".format(i,back_hidden.requires_grad))
-        # print("output_state1:{}".format(output.requires_grad))
-        # output = out_status.permute(1, 0, 2)
-        # print("output_state2:{}".format(output.requires_grad))
-        # output = self.word_linear(output)
-        # output=self.dropout(output)
-        # print("output_state3:{}".format(output.requires_grad))
-        output = self.predict_linear(out_status.view(batch_size,-1))
+        next_inputs=inputs
+        for j in range(self.layer_num):
+            hidden=self.hidden_state[j]
+            state=self.begin_state[j]
+            current_inputs=next_inputs
+            next_inputs=[]
+            for i in range(seq_len):
+                # if j!=0:
+                    # hidden=self.dropout(hidden)
+                hidden,state=self.model[j](hidden,current_inputs[i],state)
+                if j!=self.layer_num-1:
+                    hidden=self.dropout(hidden)
+                next_inputs.append(hidden)
+        output=torch.stack(next_inputs,0)
+        output=output.permute([1,2,0])
+        output=torch.max_pool1d(output,output.size(2)).squeeze(2)
+        output = self.predict_linear(output)
         # print("output_state4:{}".format(output.requires_grad))
         return output
