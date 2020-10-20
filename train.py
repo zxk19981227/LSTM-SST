@@ -10,6 +10,7 @@ import T_f
 import model
 from reader import Reader
 import numpy as np
+# import torchprof
 import fitlog
 import torch.nn.utils.rnn as rnn
 import argparse
@@ -37,12 +38,12 @@ parser=argparse.ArgumentParser()
 best_acc=0
 step=0
 best_step=0
-parser.add_argument("--learnrate",type=float,default=0.005)
-parser.add_argument("--embedding",type=int,default=120)
+parser.add_argument("--learnrate",type=float,default=0.05)
+parser.add_argument("--embedding",type=int,default=300)
 parser.add_argument("--dropout",type=float,default=0.5)
-parser.add_argument("--layer",type=int,default=4)
+parser.add_argument("--layer",type=int,default=1)
 parser.add_argument("--epoch",type=int,default=20)
-parser.add_argument("--org",type=int,default=1)
+parser.add_argument("--org",type=int,default=0)
 
 
 os.environ["CUDA_VISIBLE_DEVICES"] = "3"
@@ -55,7 +56,7 @@ print("create test reader")
 dev_reader=Reader("./data/SST2/dev.txt",56)
 # print("max sentence length",train_reader.max_line)
 # print(test_reader.max_line)
-train_loader=torch.utils.data.DataLoader(train_reader,shuffle=True,batch_size=6144)#,collate_fn=coloate_fn)
+train_loader=torch.utils.data.DataLoader(train_reader,shuffle=True,batch_size=25)#,collate_fn=coloate_fn)
 test_loader=torch.utils.data.DataLoader(test_reader,shuffle=True,batch_size=25)#,collate_fn=coloate_fn)
 dev_loader=torch.utils.data.DataLoader(dev_reader,shuffle=True,batch_size=25)#,collate_fn=coloate_fn)
 print("building model")
@@ -73,8 +74,9 @@ embedding_size = 300
 loss_function=torch.nn.CrossEntropyLoss()
 # fitlog.add_hyper(0.9,name='momentum')
 optimizer=torch.optim.Adam(model.parameters(),args.learnrate)
-tr=open("train.txt",'w')
-file = open("tests.txt", 'w')
+# tr=open("train.txt",'w')
+# file = open("tests.txt", 'w')
+# @profile
 for i in range(learning_epoch):
     model.train()
     losss=[]
@@ -91,9 +93,12 @@ for i in range(learning_epoch):
         # print("data",data)
         # score = score.cuda()
         # data = data.cuda()
+        # with torchprof.Profile(model,use_cuda=True) as prof:
         predict = model(data)
         # print("predict",predict.shape)
         # print("score,",score.shape)
+        # print(predict.shape)
+        # print(score.shape)
         loss=loss_function(predict,score)
         # print("loss:{}".format(loss.requires_grad))
         # loss=loss.requires_grad_()
@@ -101,8 +106,12 @@ for i in range(learning_epoch):
         # print("predict:{}".format(predict.requires_grad))
         loss.backward()
         optimizer.step()
-        for each in zip(score,predict):
-            tr.write(str(each)+'\n')
+        # print(prof.display(show_events=False))
+        # with open("Bi.txt",'w') as f:
+        #     f.write(str(prof.display(show_events=False)))
+        # exit()
+        # for each in zip(score,predict):
+        #     tr.write(str(each)+'\n')
         # print(loss.grad)
         losss.append(loss.item())
         # tmp=zip(score,torch.argmax(predict,-1))
@@ -114,7 +123,7 @@ for i in range(learning_epoch):
     # fitlog.add_metric(np.mean(losss),name="loss",step=i)
     # fitlog.add_metric(acc/total,name='acc',step=i)
     # if num %100==0:
-    torch.save(model.state_dict(), "model.bin")
+    # torch.save(model.state_dict(), "model.bin")
     losss2 = []
     acc2 = 0
     total2 = 0

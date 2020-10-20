@@ -38,7 +38,7 @@ class Reader(torch.utils.data.Dataset):
         self.sentence=torch.tensor(self.sentence)
 
     def __getitem__(self, item):
-        return torch.tensor(self.score[item]),torch.tensor(self.sentence[item])
+        return self.score[item],self.sentence[item]
 
     def __len__(self):
         return len(self.score)
