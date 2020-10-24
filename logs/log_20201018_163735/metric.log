@@ -1,3 +1,0 @@
-Step:0	{"metric": {"loss": 0.7022890360267074}, "step": 0}
-Step:0	{"metric": {"acc": 0.7310865020622634}, "step": 0}
-Step:0	{"metric": {"test_acc": 0.40599455040871935}, "step": 0}

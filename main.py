@@ -37,15 +37,16 @@ parser=argparse.ArgumentParser()
 best_acc=0
 step=0
 best_step=0
-parser.add_argument("--learnrate",type=float,default=0.005)
-parser.add_argument("--embedding",type=int,default=120)
+parser.add_argument("--optim",type=int,default=1)
+parser.add_argument("--learnrate",type=float,default=0.1)
+parser.add_argument("--embedding",type=int,default=160)
 parser.add_argument("--dropout",type=float,default=0.5)
 parser.add_argument("--layer",type=int,default=3)
-parser.add_argument("--epoch",type=int,default=5)
+parser.add_argument("--epoch",type=int,default=10)
 parser.add_argument("--org",type=int,default=1)
-parser.add_argument("--batch",type=int,default=30)
+parser.add_argument("--batch",type=int,default=2048)
 parser.add_argument("--cuda",type=int,default=3)
-
+parser.add_argument("--momentum",type=float,default=0.0001)
 args=parser.parse_args()
 os.environ["CUDA_VISIBLE_DEVICES"] = str(args.cuda)
 fitlog.add_hyper(args)
@@ -72,8 +73,11 @@ model.zero_grad()
 learning_epoch=args.epoch
 embedding_size = 300
 loss_function=torch.nn.CrossEntropyLoss()
-fitlog.add_hyper(0.9,name='momentum')
-optimizer=torch.optim.Adam(model.parameters(),args.learnrate)
+# fitlog.add_hyper(0.9,name='momentum')
+if args.optim==0:
+    optimizer=torch.optim.Adam(model.parameters(),args.learnrate)
+else:
+    optimizer = torch.optim.SGD(model.parameters(), lr=args.learnrate,weight_decay=args.momentum)
 tr=open("train.txt",'w')
 file = open("tests.txt", 'w')
 for i in range(learning_epoch):

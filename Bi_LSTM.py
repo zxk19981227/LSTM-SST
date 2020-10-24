@@ -31,6 +31,7 @@ class LSTM_Unit(jit.ScriptModule):
         # print(input.shape)
         # print(state.shape)
         feature=self.layernormal1(self.linear(input))+self.layernormal2(self.linear_hidden(state))
+        # feature=self.linear(input)+self.linear_hidden(state)
         feature.squeeze()
         ingate,forget_gate,cell_gate,cellstat=feature.chunk(4,1)
         ingate=self.sigmoid(ingate)
@@ -38,6 +39,7 @@ class LSTM_Unit(jit.ScriptModule):
         cell_gate=self.tanh(cell_gate)
         cellstat=self.sigmoid(cellstat)
         cell=self.layernormal3(torch.mul(cons,forget_gate)+torch.mul(ingate,cell_gate))
+        # cell=torch.mul(cons,forget_gate)+torch.mul(ingate,cell_gate)
         out=torch.mul(self.tanh(cell),cellstat)
         return out,cell
 
@@ -120,22 +122,23 @@ class Stack_LSTM(jit.ScriptModule):
                 [LSTM_layer(embedding_size, hidden_size)])
             self.backward_model = torch.nn.ModuleList(
                 [reverse_LSTM(embedding_size, hidden_size)])
+        self.dropout=torch.nn.Dropout(Dropout_rate)
     @jit.script_method
     def forward(self, inputs,fhiddens, bhiddens, fstates, bstates):
         outputs=jit.annotate(List[Tuple[torch.Tensor,torch.Tensor]],[])
         outputf=inputs
         outputb=inputs
         i=0
-        for layer1,layer2 in zip(self.forward_model,self.backward_model):#,self.dropoutf,self.dropoutb):
+        for layer1,layer2,dropout1,dropout2 in zip(self.forward_model,self.backward_model,self.dropoutf,self.dropoutb):
             fstate=fstates[i]
             bstate=bstates[i]
             fhidden=fhiddens[i]
             bhidden=bhiddens[i]
             outputf,fstate=layer1(outputf,fstate,fhidden)
             outputb,bstate=layer2(outputb,bstate,bhidden)
-            # outputf=dro1(outputf)
-            # outputb=dro2(outputb)
+            outputf=dropout1(outputf)
+            outputb=dropout2(outputb)
             i+=1
             outputs+=[(fstate,bstate)]
-        return torch.cat((outputf,outputb),-1),outputs
+        return self.dropout(torch.cat((outputf,outputb),-1)),outputs
 
