@@ -30,9 +30,9 @@ class Modle(torch.nn.Module):
         print("vocab_size", vocab_size)
         self.model = Stack_LSTM(layer_num,300,target_size,dropout_rate)
         self.predict=torch.nn.Linear(2*target_size,label_size)
-        self.embedding = torch.nn.Embedding(vocab_size, 300)
+        # self.embedding = torch.nn.Embedding(vocab_size, 300)
         # self.embedding.weight.requires_grad
-        self.embedding.from_pretrained(torch.from_numpy(weights))
+        self.embedding=torch.nn.Embedding.from_pretrained(torch.from_numpy(weights))
         # self.LSTM = LSTM(target_size,layer_num,seq_len,label_size,dropout_rate)
         self.sig=torch.nn.Sigmoid()
         # self.pool=torch.nn.MaxPool1d()

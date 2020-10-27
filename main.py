@@ -35,9 +35,10 @@ def coloate_fn(t_data):
     return torch.tensor(score_list),data_list
 parser=argparse.ArgumentParser()
 best_acc=0
+best_test=0
 step=0
 best_step=0
-parser.add_argument("--optim",type=int,default=1)
+parser.add_argument("--optim",type=int,default=0)
 parser.add_argument("--learnrate",type=float,default=0.1)
 parser.add_argument("--embedding",type=int,default=160)
 parser.add_argument("--dropout",type=float,default=0.5)
@@ -75,7 +76,7 @@ embedding_size = 300
 loss_function=torch.nn.CrossEntropyLoss()
 # fitlog.add_hyper(0.9,name='momentum')
 if args.optim==0:
-    optimizer=torch.optim.Adam(model.parameters(),args.learnrate)
+    optimizer=torch.optim.Adagrad(model.parameters(),args.learnrate)
 else:
     optimizer = torch.optim.SGD(model.parameters(), lr=args.learnrate,weight_decay=args.momentum)
 tr=open("train.txt",'w')
@@ -119,7 +120,7 @@ for i in range(learning_epoch):
     fitlog.add_metric(np.mean(losss),name="loss",step=i)
     fitlog.add_metric(acc/total,name='acc',step=i)
     # if num %100==0:
-    torch.save(model.state_dict(), "model.bin")
+    # torch.save(model.state_dict(), "model.bin")
     losss2 = []
     acc2 = 0
     total2 = 0
@@ -141,22 +142,25 @@ for i in range(learning_epoch):
         if acc2/total2 > best_acc:
             best_acc=acc2/total2
             fitlog.add_best_metric({"dev":best_acc})
-            losss2 = []
-            acc2 = 0
-            total2 = 0
-            for num, (score, data) in tqdm(enumerate(test_loader)):
-                batch_size=score.size(0)
-                embedding_size=300
-                score = score.cuda()
-                data = data.cuda()
-                predict = model(data)
-                loss = loss_function(predict,score)
-                losss2.append(loss.item())
-                acc2 += (score == torch.argmax(predict, -1)).cpu().sum().item()
-                total2 += score.size(0)
-                # for each in zip(score,predict,data):
-                #     file.write(str(each)+"\n")
-            print("test epoch %s accuracy is %s loss is %s " % (str(i), str(acc2 / total2), str(np.mean(losss2))))
-            fitlog.add_best_metric({'test':acc2/total2})
+        losss2 = []
+        acc2 = 0
+        total2 = 0
+        for num, (score, data) in tqdm(enumerate(test_loader)):
+            batch_size=score.size(0)
+            embedding_size=300
+            score = score.cuda()
+            data = data.cuda()
+            predict = model(data)
+            loss = loss_function(predict,score)
+            losss2.append(loss.item())
+            acc2 += (score == torch.argmax(predict, -1)).cpu().sum().item()
+            total2 += score.size(0)
+            # for each in zip(score,predict,data):
+            #     file.write(str(each)+"\n")
+        print("test epoch %s accuracy is %s loss is %s " % (str(i), str(acc2 / total2), str(np.mean(losss2))))
+        if acc2/total2>best_test:
+            best_test=acc2/total2
+        fitlog.add_best_metric({'test':best_test})
+        fitlog.add_metric(acc2 / total2, name='dev_acc', step=i)
 
 fitlog.finish()                     # finish the logging

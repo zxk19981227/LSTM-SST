@@ -140,5 +140,5 @@ class Stack_LSTM(jit.ScriptModule):
             outputb=dropout2(outputb)
             i+=1
             outputs+=[(fstate,bstate)]
-        return self.dropout(torch.cat((outputf,outputb),-1)),outputs
+        return torch.cat((outputf,outputb),-1),outputs
 
